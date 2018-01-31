@@ -49,30 +49,18 @@ function denormalize(
   shouldDenormalize = defaultShouldDenormalize
 ) {
   let output;
+  const callbacks = { idToCacheKey, isId, shouldDenormalize };
   if (Array.isArray(result)) {
-    output = result.map(item =>
-      denormalizeValue(item, entities, idToCacheKey, isId, shouldDenormalize)
-    );
+    output = result.map(item => denormalizeValue(item, entities, callbacks));
   } else {
-    output = denormalizeValue(
-      result,
-      entities,
-      idToCacheKey,
-      isId,
-      shouldDenormalize
-    );
+    output = denormalizeValue(result, entities, callbacks);
   }
   return output;
 }
 
 // Denormalizes the value if it is an ID, otherwise just returns the value
-function denormalizeValue(
-  value,
-  entities,
-  idToCacheKey,
-  isId,
-  shouldDenormalize
-) {
+function denormalizeValue(value, entities, callbacks) {
+  const { idToCacheKey, isId, shouldDenormalize } = callbacks;
   // Check if it is an ID
   if (!isId(value, entities)) {
     return value;
@@ -88,22 +76,10 @@ function denormalizeValue(
       } else if (Array.isArray(keyObj)) {
         // This could either be an array of values, or an array of IDs
         denormalizedObj[key] = keyObj.map(item =>
-          denormalizeValue(
-            item,
-            entities,
-            idToCacheKey,
-            isId,
-            shouldDenormalize
-          )
+          denormalizeValue(item, entities, callbacks)
         );
       } else {
-        denormalizedObj[key] = denormalizeValue(
-          keyObj,
-          entities,
-          idToCacheKey,
-          isId,
-          shouldDenormalize
-        );
+        denormalizedObj[key] = denormalizeValue(keyObj, entities, callbacks);
       }
     }
     return denormalizedObj;
