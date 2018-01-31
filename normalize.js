@@ -1,3 +1,5 @@
+"use strict";
+
 const data = {
   id: "123",
   author: {
@@ -45,10 +47,14 @@ function denormalize(result, entities) {
   return output;
 }
 
+// Denormalizes the value if it is an ID, otherwise just returns the value
 function denormalizeValue(value, entities) {
-  // The value can be a regular value or an ID
+  // Check if it is an ID
+  if (!isId(value, entities)) {
+    return value;
+  }
   // If we find a object in the cache let's assume it is an ID
-  const normalizedObj = entities[value];
+  const normalizedObj = entities[idToCacheKey(value)];
   if (normalizedObj) {
     const denormalizedObj = {};
     for (const key of Object.keys(normalizedObj)) {
@@ -72,8 +78,8 @@ function denormalizeValue(value, entities) {
 }
 
 function normalizeRecursive(obj, cache) {
-  const objectId = getObjectId(obj);
-  cache[objectId] = obj;
+  const objectId = createId(obj);
+  cache[idToCacheKey(objectId)] = obj;
   for (const key of Object.keys(obj)) {
     const keyObj = obj[key];
     if (Array.isArray(keyObj)) {
@@ -97,8 +103,28 @@ function normalizeRecursive(obj, cache) {
   return objectId;
 }
 
-function getObjectId(obj) {
+// Create an ID that can be used for normalized cahce
+// Can for example create an object of a special class
+// and then in idToString() check if it is an instance of that class
+function createId(obj) {
   return obj.id;
+}
+
+// Returns a string representation of the ID that can be used as a cache key
+// in a plain JS object
+function idToCacheKey(id) {
+  return id;
+}
+
+// If value is a ID then return true
+function isId(value, entities) {
+  if (typeof value === "string") {
+    // If we find a object in the cache let's assume it is an ID
+    if (entities[value]) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isObject(o) {
