@@ -19,18 +19,59 @@ const data = {
 const result = normalize(data);
 
 const util = require("util");
+console.log("NORMALIZE:");
 console.log(util.inspect(result, { showHidden: false, depth: null }));
 
+console.log("DENORMALIZE:");
+const denorm = denormalize(result.result, result.entities);
+console.log(util.inspect(denorm, { showHidden: false, depth: null }));
+
 function normalize(data) {
-  const cache = {};
-  const result = buildCacheRecursive(data, cache);
+  const entities = {};
+  const result = normalizeRecursive(data, entities);
   return {
     result: result,
-    cache: cache
+    entities: entities
   };
 }
 
-function buildCacheRecursive(obj, cache) {
+function denormalize(result, entities) {
+  let output;
+  if (Array.isArray(result)) {
+    output = result.map(item => denormalizeValue(item, entities));
+  } else {
+    output = denormalizeValue(result, entities);
+  }
+  return output;
+}
+
+function denormalizeValue(value, entities) {
+  // The value can be a regular value or an ID
+  // If we find a object in the cache let's assume it is an ID
+  const normalizedObj = entities[value];
+  if (normalizedObj) {
+    const denormalizedObj = {};
+    for (const key of Object.keys(normalizedObj)) {
+      const keyObj = normalizedObj[key];
+      if (key === "id") {
+        // Skip this!
+        denormalizedObj[key] = keyObj;
+      } else if (Array.isArray(keyObj)) {
+        // This could either be an array of values, or an array of IDs
+        denormalizedObj[key] = keyObj.map(item =>
+          denormalizeValue(item, entities)
+        );
+      } else {
+        denormalizedObj[key] = denormalizeValue(keyObj, entities);
+      }
+    }
+    return denormalizedObj;
+  } else {
+    return value;
+  }
+}
+
+function normalizeRecursive(obj, cache) {
   const objectId = getObjectId(obj);
   cache[objectId] = obj;
   for (const key of Object.keys(obj)) {
@@ -41,7 +82,7 @@ function buildCacheRecursive(obj, cache) {
       while (i < arr.length) {
         const item = arr[i];
         if (isObject(item)) {
-          const subObjectId = buildCacheRecursive(item, cache);
+          const subObjectId = normalizeRecursive(item, cache);
           arr[i] = subObjectId;
           i++;
         } else {
@@ -49,7 +90,7 @@ function buildCacheRecursive(obj, cache) {
         }
       }
     } else if (isObject(keyObj)) {
-      const subObjectId = buildCacheRecursive(keyObj, cache);
+      const subObjectId = normalizeRecursive(keyObj, cache);
       obj[key] = subObjectId;
     }
   }
@@ -60,7 +101,6 @@ function getObjectId(obj) {
   return obj.id;
 }
 
-// tslint:disable-next-line:no-any
 function isObject(o) {
   return o instanceof Object && o.constructor === Object;
 }
