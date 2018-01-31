@@ -34,7 +34,8 @@ function normalize(
   idToCacheKey = defaultIdToCacheKey
 ) {
   const entities = {};
-  const result = normalizeRecursive(data, entities, createId, idToCacheKey);
+  const callbacks = { createId, idToCacheKey };
+  const result = normalizeRecursive(data, entities, callbacks);
   return {
     result: result,
     entities: entities
@@ -88,7 +89,8 @@ function denormalizeValue(value, entities, callbacks) {
   }
 }
 
-function normalizeRecursive(obj, cache, createId, idToCacheKey) {
+function normalizeRecursive(obj, cache, callbacks) {
+  const { createId, idToCacheKey } = callbacks;
   const objectId = createId(obj);
   cache[idToCacheKey(objectId)] = obj;
   for (const key of Object.keys(obj)) {
@@ -99,12 +101,7 @@ function normalizeRecursive(obj, cache, createId, idToCacheKey) {
       while (i < arr.length) {
         const item = arr[i];
         if (isObject(item)) {
-          const subObjectId = normalizeRecursive(
-            item,
-            cache,
-            createId,
-            idToCacheKey
-          );
+          const subObjectId = normalizeRecursive(item, cache, callbacks);
           arr[i] = subObjectId;
           i++;
         } else {
@@ -112,12 +109,7 @@ function normalizeRecursive(obj, cache, createId, idToCacheKey) {
         }
       }
     } else if (isObject(keyObj)) {
-      const subObjectId = normalizeRecursive(
-        keyObj,
-        cache,
-        createId,
-        idToCacheKey
-      );
+      const subObjectId = normalizeRecursive(keyObj, cache, callbacks);
       obj[key] = subObjectId;
     }
   }
