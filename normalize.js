@@ -59,7 +59,7 @@ function denormalizeValue(value, entities) {
     const denormalizedObj = {};
     for (const key of Object.keys(normalizedObj)) {
       const keyObj = normalizedObj[key];
-      if (key === "id") {
+      if (!shouldDenormalize(keyObj, key)) {
         // Skip this!
         denormalizedObj[key] = keyObj;
       } else if (Array.isArray(keyObj)) {
@@ -114,6 +114,12 @@ function createId(obj) {
 // in a plain JS object
 function idToCacheKey(id) {
   return id;
+}
+
+// Deterimies if a key on an object should be denormalized or not
+function shouldDenormalize(obj, key) {
+  // Since we use strings for ID we need to take care not to denormalize the ID field
+  return key !== "id";
 }
 
 // If value is a ID then return true
