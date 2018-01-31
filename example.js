@@ -1,7 +1,7 @@
 "use strict";
 
 const Normalizer = require("./normalizer");
-console.log(Normalizer);
+
 const data = {
   id: "123",
   author: {
