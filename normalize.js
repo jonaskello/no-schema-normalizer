@@ -28,27 +28,51 @@ console.log("DENORMALIZE:");
 const denorm = denormalize(result.result, result.entities);
 console.log(util.inspect(denorm, { showHidden: false, depth: null }));
 
-function normalize(data) {
+function normalize(
+  data,
+  createId = defaultCreateId,
+  idToCacheKey = defaultIdToCacheKey
+) {
   const entities = {};
-  const result = normalizeRecursive(data, entities);
+  const result = normalizeRecursive(data, entities, createId, idToCacheKey);
   return {
     result: result,
     entities: entities
   };
 }
 
-function denormalize(result, entities) {
+function denormalize(
+  result,
+  entities,
+  idToCacheKey = defaultIdToCacheKey,
+  isId = defaultIsId,
+  shouldDenormalize = defaultShouldDenormalize
+) {
   let output;
   if (Array.isArray(result)) {
-    output = result.map(item => denormalizeValue(item, entities));
+    output = result.map(item =>
+      denormalizeValue(item, entities, idToCacheKey, isId, shouldDenormalize)
+    );
   } else {
-    output = denormalizeValue(result, entities);
+    output = denormalizeValue(
+      result,
+      entities,
+      idToCacheKey,
+      isId,
+      shouldDenormalize
+    );
   }
   return output;
 }
 
 // Denormalizes the value if it is an ID, otherwise just returns the value
-function denormalizeValue(value, entities) {
+function denormalizeValue(
+  value,
+  entities,
+  idToCacheKey,
+  isId,
+  shouldDenormalize
+) {
   // Check if it is an ID
   if (!isId(value, entities)) {
     return value;
@@ -64,10 +88,22 @@ function denormalizeValue(value, entities) {
       } else if (Array.isArray(keyObj)) {
         // This could either be an array of values, or an array of IDs
         denormalizedObj[key] = keyObj.map(item =>
-          denormalizeValue(item, entities)
+          denormalizeValue(
+            item,
+            entities,
+            idToCacheKey,
+            isId,
+            shouldDenormalize
+          )
         );
       } else {
-        denormalizedObj[key] = denormalizeValue(keyObj, entities);
+        denormalizedObj[key] = denormalizeValue(
+          keyObj,
+          entities,
+          idToCacheKey,
+          isId,
+          shouldDenormalize
+        );
       }
     }
     return denormalizedObj;
@@ -76,7 +112,7 @@ function denormalizeValue(value, entities) {
   }
 }
 
-function normalizeRecursive(obj, cache) {
+function normalizeRecursive(obj, cache, createId, idToCacheKey) {
   const objectId = createId(obj);
   cache[idToCacheKey(objectId)] = obj;
   for (const key of Object.keys(obj)) {
@@ -87,7 +123,12 @@ function normalizeRecursive(obj, cache) {
       while (i < arr.length) {
         const item = arr[i];
         if (isObject(item)) {
-          const subObjectId = normalizeRecursive(item, cache);
+          const subObjectId = normalizeRecursive(
+            item,
+            cache,
+            createId,
+            idToCacheKey
+          );
           arr[i] = subObjectId;
           i++;
         } else {
@@ -95,7 +136,12 @@ function normalizeRecursive(obj, cache) {
         }
       }
     } else if (isObject(keyObj)) {
-      const subObjectId = normalizeRecursive(keyObj, cache);
+      const subObjectId = normalizeRecursive(
+        keyObj,
+        cache,
+        createId,
+        idToCacheKey
+      );
       obj[key] = subObjectId;
     }
   }
@@ -105,24 +151,24 @@ function normalizeRecursive(obj, cache) {
 // Create an ID that can be used for normalized cahce
 // Can for example create an object of a special class
 // and then in idToString() check if it is an instance of that class
-function createId(obj) {
+function defaultCreateId(obj) {
   return obj.id;
 }
 
 // Returns a string representation of the ID that can be used as a cache key
 // in a plain JS object
-function idToCacheKey(id) {
+function defaultIdToCacheKey(id) {
   return id;
 }
 
 // Deterimies if a key on an object should be denormalized or not
-function shouldDenormalize(obj, key) {
+function defaultShouldDenormalize(obj, key) {
   // Since we use strings for ID we need to take care not to denormalize the ID field
   return key !== "id";
 }
 
 // If value is a ID then return true
-function isId(value, entities) {
+function defaultIsId(value, entities) {
   if (typeof value === "string") {
     // If we find a object in the cache let's assume it is an ID
     if (entities[value]) {
