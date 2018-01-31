@@ -53,7 +53,6 @@ function buildCacheRecursive(obj, cache) {
       obj[key] = subObjectId;
     }
   }
-  //return obj;
   return objectId;
 }
 
