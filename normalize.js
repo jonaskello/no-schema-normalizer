@@ -53,7 +53,6 @@ function denormalizeValue(value, entities) {
   if (!isId(value, entities)) {
     return value;
   }
-  // If we find a object in the cache let's assume it is an ID
   const normalizedObj = entities[idToCacheKey(value)];
   if (normalizedObj) {
     const denormalizedObj = {};
